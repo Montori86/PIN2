@@ -76,19 +76,7 @@ resource "aws_security_group" "sg" {
   }
 }
 
-# Crear y lanzar la instancia EC2
-resource "aws_instance" "webserver" {
-  ami                         = "ami-00c39f71452c08778"
-  instance_type               = "t2.micro"
-  associate_public_ip_address = true
-  vpc_security_group_ids      = [aws_security_group.sg.id]
-  subnet_id                   = aws_subnet.subnet.id
-  user_data                   = "${file("create_apache.sh")}"
 
-  tags = {
-    Name = "webserver"
-  }
-}
 
 output "Webserver-Public-IP" {
   value = aws_instance.webserver.public_ip
