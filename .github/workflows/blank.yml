@@ -34,7 +34,7 @@ jobs:
           AWS_REGION: 'us-east-1'
 
       - name: Output Webserver IP
-        run: echo "Webserver IP: ${{ steps.terraform.outputs.Webserver-Public-IP }}"
+        run: echo "Webserver IP ${{ steps.apply.outputs.Webserver-Public-IP }}"
 
 
   terraform-destroy:
