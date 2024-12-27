@@ -1,15 +1,4 @@
-provider "aws" {
-  region = "us-east-1"
-}
-
-
-
-#Get Linux AMI ID using SSM Parameter endpoint in us-east-1
-#data "aws_ssm_parameter" "webserver-ami" {
-#  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
-#}
-
-#Create VPC in us-east-1
+# Crear VPC en us-east-1
 resource "aws_vpc" "vpc" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -17,15 +6,14 @@ resource "aws_vpc" "vpc" {
   tags = {
     Name = "terraform-vpc"
   }
-
 }
 
-#Create IGW in us-east-1
+# Crear IGW en us-east-1
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
 }
 
-#Get main route table to modify
+# Obtener la tabla de enrutamiento principal
 data "aws_route_table" "main_route_table" {
   filter {
     name   = "association.main"
@@ -36,7 +24,8 @@ data "aws_route_table" "main_route_table" {
     values = [aws_vpc.vpc.id]
   }
 }
-#Create route table in us-east-1
+
+# Crear ruta para el acceso a Internet
 resource "aws_default_route_table" "internet_route" {
   default_route_table_id = data.aws_route_table.main_route_table.id
   route {
@@ -48,20 +37,19 @@ resource "aws_default_route_table" "internet_route" {
   }
 }
 
-#Get all available AZ's in VPC for master region
+# Obtener las AZ disponibles
 data "aws_availability_zones" "azs" {
   state = "available"
 }
 
-#Create subnet # 1 in us-east-1
+# Crear Subnet # 1 en us-east-1
 resource "aws_subnet" "subnet" {
   availability_zone = element(data.aws_availability_zones.azs.names, 0)
   vpc_id            = aws_vpc.vpc.id
   cidr_block        = "10.0.1.0/24"
 }
 
-
-#Create SG for allowing TCP/80 & TCP/22
+# Crear Grupo de Seguridad para permitir TCP/80 & TCP/22
 resource "aws_security_group" "sg" {
   name        = "sg"
   description = "Allow TCP/80 & TCP/22"
@@ -74,7 +62,7 @@ resource "aws_security_group" "sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-    description = "allow traffic from TCP/80"
+    description = "Allow HTTP traffic"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -85,6 +73,20 @@ resource "aws_security_group" "sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Crear y lanzar la instancia EC2
+resource "aws_instance" "webserver" {
+  ami                         = "ami-00c39f71452c08778"
+  instance_type               = "t2.micro"
+  associate_public_ip_address = true
+  vpc_security_group_ids      = [aws_security_group.sg.id]
+  subnet_id                   = aws_subnet.subnet.id
+  user_data                   = "${file("create_apache.sh")}"
+
+  tags = {
+    Name = "webserver"
   }
 }
 
